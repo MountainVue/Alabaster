@@ -135,6 +135,28 @@ browser, not in the installed folder. An update never touches them.
 clone, symlinked into your configuration directory, separate from the
 directory an app update replaces.
 
+### Moving from the previous repository
+
+Alabaster's repository moved from `Hannott/Alabaster` to
+`MountainVue/Alabaster`. An install made before the move still looks for
+updates in the previous repository.
+
+Run the install command again. The **Moonraker updates** step then reads
+_follow MountainVue/Alabaster_. With it on, the installer:
+
+1. Points the `[update_manager alabaster]` entry in `moonraker.conf` at the
+   new repository.
+2. Replaces the macro pack's clone in `~/alabaster-config` with a clone of the
+   new repository, at the release it was on.
+3. Points the `[update_manager alabaster-config]` entry at the new repository.
+
+`moonraker.conf` is backed up first, as `moonraker.conf.alabaster-backup`.
+Restart Moonraker afterwards.
+
+A clone you have changed yourself is left as it is, and the installer says
+so. An entry that names another repository, such as your own fork, is not
+changed.
+
 ## Uninstalling
 
 ```bash

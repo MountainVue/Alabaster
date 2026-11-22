@@ -12,6 +12,11 @@ set -euo pipefail
 
 REPO='MountainVue/Alabaster'
 CONFIG_REPO_ORIGIN="https://github.com/${REPO}.git"
+# Where Alabaster has lived before. An install made from one of these still
+# names it in moonraker.conf and in the macro pack's clone, so it goes on
+# asking a repository that has stopped publishing — see follow_this_repository.
+# Space-separated, and never the value of REPO.
+FORMER_REPOS='Hannott/Alabaster'
 DEFAULT_PATH="${HOME}/alabaster"
 DEFAULT_CONFIG_REPO_PATH="${HOME}/alabaster-config"
 DEFAULT_PORT='8090'
@@ -828,6 +833,7 @@ detect() {
     nginx_present=0 nginx_site='' nginx_site_exists=0 nginx_site_private=0 other_site=''
     current_version='' link_state='none' link_current=''
     include_present=0 conflicts='' um_app=0 um_pack=0 printer_now=''
+    um_app_former=0 um_pack_former=0 clone_former=0 former_repo=''
 
     host_name="$(hostname 2>/dev/null || printf 'printer')"
     if [ -r /proc/device-tree/model ]; then
@@ -906,7 +912,66 @@ detect() {
         grep -qE '^[[:space:]]*\[update_manager[[:space:]]+alabaster\]' "$moonraker_conf" && um_app=1
         grep -qE '^[[:space:]]*\[update_manager[[:space:]]+alabaster-config\]' "$moonraker_conf" && um_pack=1
     fi
+
+    local found
+    if [ "$um_app" -eq 1 ]; then
+        found="$(conf_option alabaster repo)"
+        is_former_repo "$found" && { um_app_former=1; former_repo="$found"; }
+    fi
+    if [ "$um_pack" -eq 1 ]; then
+        found="$(repo_of_url "$(conf_option alabaster-config origin)")"
+        is_former_repo "$found" && { um_pack_former=1; former_repo="$found"; }
+    fi
+    if [ -d "${config_repo_path}/.git" ]; then
+        found="$(repo_of_url "$(git -C "$config_repo_path" config remote.origin.url 2>/dev/null || true)")"
+        is_former_repo "$found" && { clone_former=1; former_repo="$found"; }
+    fi
     return 0
+}
+
+# owner/name from a GitHub address, in whichever form it was written.
+repo_of_url() {
+    local address="${1%/}"
+    address="${address%.git}"
+    address="${address#https://github.com/}"
+    address="${address#http://github.com/}"
+    address="${address#git@github.com:}"
+    printf '%s' "$address"
+}
+
+# GitHub does not distinguish case in an owner or a repository name.
+is_former_repo() {
+    local candidate="${1,,}" former
+    [ -n "$candidate" ] || return 1
+    for former in $FORMER_REPOS; do
+        [ "$candidate" = "${former,,}" ] && return 0
+    done
+    return 1
+}
+
+follows_former() { [ "$um_app_former" -eq 1 ] || [ "$um_pack_former" -eq 1 ] || [ "$clone_former" -eq 1 ]; }
+
+# The value of one option in one [update_manager <name>] block of moonraker.conf.
+conf_option() {
+    awk -v section="$1" -v key="$2" '
+        /^[[:space:]]*\[/ { inside = ($0 ~ ("^[[:space:]]*\\[update_manager[[:space:]]+" section "\\]")) }
+        inside && match($0, "^" key "[[:space:]]*[:=][[:space:]]*") {
+            value = substr($0, RLENGTH + 1)
+            sub(/[[:space:]]*(#.*)?$/, "", value)
+            print value
+            exit
+        }
+    ' "$moonraker_conf"
+}
+
+# Replaces that value, leaving every other line of the file as it was.
+set_conf_option() {
+    awk -v section="$1" -v key="$2" -v value="$3" '
+        /^[[:space:]]*\[/ { inside = ($0 ~ ("^[[:space:]]*\\[update_manager[[:space:]]+" section "\\]")) }
+        inside && $0 ~ ("^" key "[[:space:]]*[:=]") { print key ": " value; next }
+        { print }
+    ' "$moonraker_conf" > "${moonraker_conf}.tmp"
+    mv "${moonraker_conf}.tmp" "$moonraker_conf"
 }
 
 show_banner() {
@@ -1194,22 +1259,88 @@ ensure_config_repo() {
     fi
 
     say "Cloning the macro pack (${installed_version:-latest})..."
-    if git clone --filter=blob:none --sparse --branch main "$CONFIG_REPO_ORIGIN" "$config_repo_path" 2>/dev/null \
-        && git -C "$config_repo_path" sparse-checkout set klipper 2>/dev/null; then
+    if clone_config_repo "$config_repo_path"; then
         pin_config_repo
         return 0
     fi
-
-    rm -rf "$config_repo_path"
-    if git clone --branch main "$CONFIG_REPO_ORIGIN" "$config_repo_path" 2>/dev/null; then
-        warn 'Cloned the full repository rather than just klipper/; an older git here does not support partial clones.'
-        pin_config_repo
-        return 0
-    fi
-
-    rm -rf "$config_repo_path"
     warn 'Could not clone the macro pack repository. Check your network, then re-run this installer to add it.'
     return 1
+}
+
+# The clone itself, in the shape described above ensure_config_repo. Leaves
+# nothing behind when no clone could be made.
+clone_config_repo() {
+    local destination="$1"
+    if git clone --filter=blob:none --sparse --branch main "$CONFIG_REPO_ORIGIN" "$destination" 2>/dev/null \
+        && git -C "$destination" sparse-checkout set klipper 2>/dev/null; then
+        return 0
+    fi
+
+    rm -rf "$destination"
+    if git clone --branch main "$CONFIG_REPO_ORIGIN" "$destination" 2>/dev/null; then
+        warn 'Cloned the full repository rather than just klipper/; an older git here does not support partial clones.'
+        return 0
+    fi
+
+    rm -rf "$destination"
+    return 1
+}
+
+# Replaces a clone of a repository Alabaster has left with a clone of this one.
+#
+# Replaced rather than re-pointed. The move to MountainVue/Alabaster rewrote
+# every commit, so the two histories share none: a clone given the new remote
+# is left on commits its origin has never had, which Moonraker reports as
+# diverged and can only recover from with a hard reset. A new clone is the one
+# shape ensure_config_repo already guarantees Moonraker can update.
+#
+# It stays at the release the old clone was on, where this repository has that
+# release, so the macros do not change under a printer as a side effect of the
+# move; Moonraker offers anything newer as an ordinary update. The old clone is
+# kept until the new one is in place, and a clone holding anything of the
+# owner's — an edit, an untracked file, a commit of their own — is left alone.
+replace_config_repo() {
+    local repo="$config_repo_path" fresh="${config_repo_path}.new" old="${config_repo_path}.old"
+    local release='' candidate was
+
+    if [ -n "$(git -C "$repo" status --porcelain 2>/dev/null)" ] \
+        || [ -z "$(git -C "$repo" for-each-ref --contains HEAD refs/remotes refs/tags 2>/dev/null)" ]; then
+        warn "$(home_path "$repo") has changes of its own, so it still follows ${former_repo}. Undo them or delete the folder, then run this installer again."
+        return 1
+    fi
+
+    say "Cloning the macro pack from ${REPO}..."
+    rm -rf "$fresh"
+    if ! clone_config_repo "$fresh"; then
+        warn "Could not clone ${REPO}, so the macro pack still follows ${former_repo}. Check your network, then run this installer again."
+        return 1
+    fi
+
+    was="$(git -C "$repo" describe --tags --exact-match 2>/dev/null || true)"
+    for candidate in "$was" "$installed_version"; do
+        if [ -n "$candidate" ] && git -C "$fresh" rev-parse -q --verify "refs/tags/${candidate}^{commit}" >/dev/null 2>&1; then
+            release="$candidate"
+            break
+        fi
+    done
+    if [ -n "$release" ]; then
+        git -C "$fresh" reset -q --hard "$release"
+    else
+        warn "The release the macro pack was on was not found in ${REPO}; it is at the latest commit instead."
+    fi
+
+    rm -rf "$old"
+    mv "$repo" "$old"
+    if ! mv "$fresh" "$repo"; then
+        mv "$old" "$repo"
+        rm -rf "$fresh"
+        warn "Could not replace $(home_path "$repo"), so the macro pack still follows ${former_repo}."
+        return 1
+    fi
+    rm -rf "$old"
+    did "Macro pack is now a clone of ${REPO}${release:+, at ${release}}"
+    # Klipper has already read these macros unless the release changed.
+    if [ "$include_present" -eq 1 ] && { [ -z "$release" ] || [ "$release" != "$was" ]; }; then changed_klipper=1; fi
 }
 
 # Moves `main` to the installed release. A release that is not on `main` yet
@@ -1480,6 +1611,42 @@ repair_site_mode() {
 }
 
 
+# Moves an install made from a former repository over to this one: the macro
+# pack's clone, and the repository each existing update_manager block names.
+#
+# Left alone, such an install does not fail. It goes on asking a repository
+# that publishes nothing new, so the printer reports itself up to date for
+# good. The app's block would be corrected by Moonraker itself after one
+# install from here, with a warning on every start, since release_info.json
+# then names a different owner than the block. The macro pack's would not,
+# and that is the drift tracking the pack as a clone exists to prevent.
+#
+# Only a value in FORMER_REPOS is rewritten. Any other repository in either
+# block is the owner's own choice, a fork for one, and stays.
+#
+# The pack's block moves only with its clone: Moonraker marks a clone invalid
+# when its remote is not the origin the block names, so a clone that could not
+# be replaced keeps the block that still matches it.
+follow_this_repository() {
+    if [ "$clone_former" -eq 1 ] && replace_config_repo; then
+        clone_former=0
+    fi
+    if [ "$um_app_former" -eq 1 ]; then
+        set_conf_option alabaster repo "$REPO"
+        did "Moonraker follows ${REPO} for the app, not ${former_repo}"
+        changed_moonraker=1
+    fi
+    if [ "$um_pack_former" -eq 1 ]; then
+        if [ "$clone_former" -eq 0 ]; then
+            set_conf_option alabaster-config origin "$CONFIG_REPO_ORIGIN"
+            did "Moonraker follows ${REPO} for the macro pack, not ${former_repo}"
+            changed_moonraker=1
+        else
+            skipped "macro pack still follows ${former_repo}"
+        fi
+    fi
+}
+
 # Two independent blocks, since the app (a downloaded release, type: web) and
 # the macro pack (a git clone, type: git_repo) are tracked by Moonraker in
 # fundamentally different ways — see deploy/moonraker/update_manager.conf for
@@ -1487,16 +1654,26 @@ repair_site_mode() {
 # and not already present, so re-running after adding the app with --no-config
 # and the macro pack later does not duplicate the first block.
 add_update_manager() {
-    local have_alabaster=0 have_config=0 config_cloned=0
+    local have_alabaster=0 have_config=0 config_cloned=0 backed_up=0
 
     step 'Updates through Moonraker'
+
+    if follows_former; then
+        if [ "$dry_run" -eq 1 ]; then
+            printf '%s(dry run)%s would follow %s instead of %s\n' "$C_DIM" "$C_OFF" "$REPO" "$former_repo"
+        else
+            cp "$moonraker_conf" "${moonraker_conf}.alabaster-backup"
+            backed_up=1
+            follow_this_repository
+        fi
+    fi
 
     grep -qE '^[[:space:]]*\[update_manager[[:space:]]+alabaster\]' "$moonraker_conf" && have_alabaster=1
     [ -d "${config_repo_path}/.git" ] && config_cloned=1
     grep -qE '^[[:space:]]*\[update_manager[[:space:]]+alabaster-config\]' "$moonraker_conf" && have_config=1
 
     if [ "$have_alabaster" -eq 1 ] && { [ "$have_config" -eq 1 ] || [ "$config_cloned" -eq 0 ]; }; then
-        did 'moonraker.conf already tracks what is installed'
+        follows_former || did 'moonraker.conf already tracks what is installed'
         return 0
     fi
 
@@ -1506,7 +1683,7 @@ add_update_manager() {
         return 0
     fi
 
-    cp "$moonraker_conf" "${moonraker_conf}.alabaster-backup"
+    [ "$backed_up" -eq 1 ] || cp "$moonraker_conf" "${moonraker_conf}.alabaster-backup"
 
     if [ "$have_alabaster" -eq 0 ]; then
         {
@@ -1518,6 +1695,9 @@ add_update_manager() {
         } >> "$moonraker_conf"
     fi
 
+    # Not for a clone that could not be moved: Moonraker refuses one whose
+    # remote differs from the origin its entry names.
+    [ "$clone_former" -eq 1 ] && config_cloned=0
     if [ "$have_config" -eq 0 ] && [ "$config_cloned" -eq 1 ]; then
         {
             printf '\n[update_manager alabaster-config]\n'
@@ -1543,7 +1723,7 @@ add_update_manager() {
 pack_available() { [ "$want_config" -eq 1 ] && [ -n "$config_dir" ] && [ -f "${work}/contents/klipper/alabaster.cfg" ]; }
 include_available() { [ "$want_include" -eq 1 ] && [ -n "$printer_cfg" ] && [ "$include_present" -eq 0 ] && [ -z "$conflicts" ]; }
 nginx_available() { [ "$want_nginx" -eq 1 ] && [ "$nginx_present" -eq 1 ] && [ -f "${work}/contents/deploy/nginx/alabaster.conf" ]; }
-updates_done() { [ "$um_app" -eq 1 ] && { [ "$um_pack" -eq 1 ] || { [ ! -d "${config_repo_path}/.git" ] && [ "$do_pack" -eq 0 ]; }; }; }
+updates_done() { ! follows_former && [ "$um_app" -eq 1 ] && { [ "$um_pack" -eq 1 ] || { [ ! -d "${config_repo_path}/.git" ] && [ "$do_pack" -eq 0 ]; }; }; }
 updates_available() { [ "$want_update_manager" -eq 1 ] && [ -n "$moonraker_conf" ] && ! updates_done; }
 
 # Each step's default is the answer the old one-question-at-a-time installer
@@ -1589,7 +1769,10 @@ plan_plain() {
         fi
     fi
 
-    if updates_available; then
+    if updates_available && follows_former; then
+        say "This install follows ${former_repo} for updates. Alabaster has moved to ${REPO}."
+        ask "Follow ${REPO} instead?" y && do_updates=1 || do_updates=0
+    elif updates_available; then
         ask 'Let Moonraker manage updates for Alabaster and its macro pack?' y && do_updates=1 || do_updates=0
     fi
 }
@@ -1690,6 +1873,13 @@ draw_plan() {
         ui_plan_row '' na 'Moonraker updates' 'no moonraker.conf found'
     elif updates_done; then
         ui_plan_row '' present 'Moonraker updates' 'already tracked'
+    elif follows_former; then
+        if [ "$do_updates" -eq 1 ]; then
+            ui_plan_row 5 on 'Moonraker updates' "follow ${REPO}"
+            ui_plan_cont "${C_DIM}$(ui_fit "it has moved from ${former_repo}" $((UI_IW - 32)))${C_OFF}"
+        else
+            ui_plan_row 5 off 'Moonraker updates' "keep following ${former_repo}"
+        fi
     else
         local what='track the app'
         { [ "$do_pack" -eq 1 ] || [ -d "${config_repo_path}/.git" ]; } && what='track the app and the macro pack'
@@ -1962,6 +2152,9 @@ execute() {
     elif updates_done; then
         add_row 'Moonraker' ok 'already tracks what is installed'
         already+=('moonraker.conf already tracks what is installed')
+    elif follows_former; then
+        add_row 'Moonraker' skip "still follows ${former_repo}"
+        skipped "updates still follow ${former_repo}, not ${REPO}"
     else
         add_row 'Moonraker' skip 'not chosen'
         skipped 'update manager not added'
@@ -2511,7 +2704,9 @@ home_state_rows() {
     else
         site="$(ui_state 'nginx site' todo 'none')"
     fi
-    if [ "$um_app" -eq 1 ] && [ "$um_pack" -eq 1 ]; then
+    if follows_former; then
+        updates="$(ui_state Updates warn "following ${former_repo}")"
+    elif [ "$um_app" -eq 1 ] && [ "$um_pack" -eq 1 ]; then
         updates="$(ui_state Updates ok 'Moonraker tracks both')"
     elif [ "$um_app" -eq 1 ]; then
         updates="$(ui_state Updates ok 'Moonraker tracks the app')"
