@@ -1,4 +1,17 @@
-# Alabaster
+<p align="center">
+  <a href="https://mountainvue.github.io/Alabaster">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="website/public/images/brand/alabaster-lockup-dark.svg">
+      <img src="website/public/images/brand/alabaster-lockup-light.svg" alt="Alabaster" width="420">
+    </picture>
+  </a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/MountainVue/Alabaster/actions/workflows/ci.yml"><img src="https://github.com/MountainVue/Alabaster/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI status"></a>
+  <a href="https://github.com/MountainVue/Alabaster/releases/latest"><img src="https://img.shields.io/github/v/release/MountainVue/Alabaster" alt="Latest release"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/MountainVue/Alabaster" alt="License: GPL-3.0"></a>
+</p>
 
 A web interface for Klipper 3D printers. It runs in any browser on your
 network, connects to Moonraker, and is built to be read from across a workshop
