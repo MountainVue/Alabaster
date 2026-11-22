@@ -13,7 +13,7 @@ hero:
       link: /guide/highlights
     - theme: alt
       text: GitHub
-      link: https://github.com/Hannott/Alabaster
+      link: https://github.com/MountainVue/Alabaster
 features:
   - title: A dashboard you build
     details: Choose from fifteen modules and arrange them across up to three columns. Desktop, tablet, and phone each keep their own layout. Drag a module to reposition it, and duplicate macro or camera modules you need more than once.

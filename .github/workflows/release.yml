@@ -55,7 +55,7 @@ jobs:
           cat > "${staging}/release_info.json" <<JSON
           {
             "project_name": "alabaster",
-            "project_owner": "Hannott",
+            "project_owner": "MountainVue",
             "version": "${VERSION}"
           }
           JSON

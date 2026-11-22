@@ -1329,7 +1329,7 @@ describe('machine system store', () => {
 describe('releaseNotesUrl', () => {
   const archive = {
     configured_type: 'web' as const,
-    owner: 'Hannott',
+    owner: 'MountainVue',
     repo_name: 'Alabaster',
     version: 'v0.5.1',
     remote_version: 'v0.6.0',
@@ -1337,10 +1337,10 @@ describe('releaseNotesUrl', () => {
 
   it('points an archive source at the GitHub release it would install', () => {
     expect(releaseNotesUrl(archive)).toBe(
-      'https://github.com/Hannott/Alabaster/releases/tag/v0.6.0',
+      'https://github.com/MountainVue/Alabaster/releases/tag/v0.6.0',
     )
     expect(releaseNotesUrl({ ...archive, configured_type: 'zip' })).toBe(
-      'https://github.com/Hannott/Alabaster/releases/tag/v0.6.0',
+      'https://github.com/MountainVue/Alabaster/releases/tag/v0.6.0',
     )
   })
 

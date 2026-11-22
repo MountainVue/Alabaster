@@ -1,8 +1,8 @@
 import { defineConfig } from 'vitepress'
 
-const repository = 'https://github.com/Hannott/Alabaster'
+const repository = 'https://github.com/MountainVue/Alabaster'
 
-// The site is served from https://hannott.github.io/Alabaster/. Switching to a
+// The site is served from https://mountainvue.github.io/Alabaster/. Switching to a
 // custom domain later means setting `base` to '/' and adding website/public/CNAME.
 export default defineConfig({
   base: '/Alabaster/',

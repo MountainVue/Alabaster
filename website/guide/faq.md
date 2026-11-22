@@ -168,6 +168,6 @@ appears in the picker automatically. See
 
 ## How do I report a bug or ask for something?
 
-Open an issue on [GitHub](https://github.com/Hannott/Alabaster). If it is about
+Open an issue on [GitHub](https://github.com/MountainVue/Alabaster). If it is about
 something the printer said, the console's **Show Klipper's own prefixes** option
 leaves the raw markers in place so you can copy a line verbatim.

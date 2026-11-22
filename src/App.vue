@@ -362,7 +362,7 @@ const mobileOverflowDestinations = computed(() =>
 )
 
 const appVersion = __APP_VERSION__
-const releaseUrl = `https://github.com/Hannott/Alabaster/releases/tag/v${appVersion}`
+const releaseUrl = `https://github.com/MountainVue/Alabaster/releases/tag/v${appVersion}`
 
 const sidebarLabel = computed(() =>
   isSidebarCollapsed.value ? t('navigation.expandSidebar') : t('navigation.collapseSidebar'),

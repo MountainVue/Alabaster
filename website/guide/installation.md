@@ -8,7 +8,7 @@ runs on your printer.
 Run this on the machine running Klipper, as the user that owns it, not as root:
 
 ```bash
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/Hannott/Alabaster/main/scripts/install.sh)"
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/MountainVue/Alabaster/main/scripts/install.sh)"
 ```
 
 The installer stays open until you quit it. It shows what is on the machine
@@ -156,7 +156,7 @@ Settings stay in the browser until you clear its site data.
 Follow these steps if you prefer not to run a script.
 
 **1. Get a release.** Download `alabaster.zip` and `alabaster.zip.sha256` from
-[the releases page](https://github.com/Hannott/Alabaster/releases), then:
+[the releases page](https://github.com/MountainVue/Alabaster/releases), then:
 
 ```bash
 sha256sum -c alabaster.zip.sha256 && unzip alabaster.zip -d ~/alabaster
@@ -180,7 +180,7 @@ installer does:
 
 ```bash
 git clone --filter=blob:none --sparse --branch <the version you installed> \
-  https://github.com/Hannott/Alabaster.git ~/alabaster-config
+  https://github.com/MountainVue/Alabaster.git ~/alabaster-config
 git -C ~/alabaster-config sparse-checkout set klipper
 ln -s ~/alabaster-config/klipper/alabaster.cfg ~/printer_data/config/alabaster.cfg
 ```

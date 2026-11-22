@@ -19,7 +19,7 @@ describe('installer scripts', () => {
     const uninstall = read('uninstall.sh')
     expect(uninstall).toMatch(/exec bash "\$\{here\}\/install\.sh" --uninstall "\$@"/)
     expect(uninstall).toMatch(
-      /raw\.githubusercontent\.com\/Hannott\/Alabaster\/main\/scripts\/install\.sh.*--uninstall "\$@"/,
+      /raw\.githubusercontent\.com\/MountainVue\/Alabaster\/main\/scripts\/install\.sh.*--uninstall "\$@"/,
     )
   })
 

@@ -112,7 +112,7 @@ The theme contract, the palette guard, locale alignment, type checking, and
 the production build all have to pass. Once they do, the pack appears in the
 picker automatically. No component changes are needed.
 
-See [`src/themes/README.md`](https://github.com/Hannott/Alabaster/blob/main/src/themes/README.md)
+See [`src/themes/README.md`](https://github.com/MountainVue/Alabaster/blob/main/src/themes/README.md)
 for the full authoring guide and the complete token table.
 
 ## A pack that wants to be something else

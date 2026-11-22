@@ -2,7 +2,7 @@
 #
 # Alabaster installer.
 #
-#   bash -c "$(curl -fsSL https://raw.githubusercontent.com/Hannott/Alabaster/main/scripts/install.sh)"
+#   bash -c "$(curl -fsSL https://raw.githubusercontent.com/MountainVue/Alabaster/main/scripts/install.sh)"
 #
 # Safe to run again: it installs over an existing copy, leaves your own
 # configuration alone, and asks before every change it makes outside its own
@@ -10,7 +10,7 @@
 
 set -euo pipefail
 
-REPO='Hannott/Alabaster'
+REPO='MountainVue/Alabaster'
 CONFIG_REPO_ORIGIN="https://github.com/${REPO}.git"
 DEFAULT_PATH="${HOME}/alabaster"
 DEFAULT_CONFIG_REPO_PATH="${HOME}/alabaster-config"

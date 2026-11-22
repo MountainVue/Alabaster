@@ -399,7 +399,7 @@ describe('MachineView', () => {
           {
             tag_name: 'v0.9.2',
             name: 'v0.9.2',
-            html_url: 'https://github.com/Hannott/Alabaster/releases/tag/v0.9.2',
+            html_url: 'https://github.com/MountainVue/Alabaster/releases/tag/v0.9.2',
             published_at: '2026-10-12T00:00:00Z',
             body: '## Bugfixes\n\n- Fixed the **home** buttons.',
           },
@@ -416,7 +416,7 @@ describe('MachineView', () => {
           id: 'alabaster',
           displayName: 'Alabaster',
           configured_type: 'web',
-          owner: 'Hannott',
+          owner: 'MountainVue',
           repo_name: 'Alabaster',
           version: 'v0.9.0',
           remote_version: 'v0.9.2',
@@ -431,7 +431,7 @@ describe('MachineView', () => {
       await flushPromises()
 
       expect(fetchMock.mock.calls[0]?.[0]).toBe(
-        'https://api.github.com/repos/Hannott/Alabaster/releases?per_page=30',
+        'https://api.github.com/repos/MountainVue/Alabaster/releases?per_page=30',
       )
       expect(dialog.text()).toContain('2 releases will be installed')
       const releases = dialog.findAll('.release-notes > li')
@@ -441,7 +441,7 @@ describe('MachineView', () => {
       expect(releases[0]?.get('strong').text()).toBe('home')
       expect(dialog.text()).not.toContain('Already installed.')
       expect(dialog.get('.update-release-notes').attributes('href')).toBe(
-        'https://github.com/Hannott/Alabaster/releases/tag/v0.9.2',
+        'https://github.com/MountainVue/Alabaster/releases/tag/v0.9.2',
       )
     } finally {
       vi.unstubAllGlobals()

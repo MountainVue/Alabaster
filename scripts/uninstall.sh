@@ -20,4 +20,4 @@ here="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" 2>/dev/null && pwd || true)"
 if [ -n "$here" ] && [ -f "${here}/install.sh" ]; then
     exec bash "${here}/install.sh" --uninstall "$@"
 fi
-exec bash -c "$(curl -fsSL https://raw.githubusercontent.com/Hannott/Alabaster/main/scripts/install.sh)" install.sh --uninstall "$@"
+exec bash -c "$(curl -fsSL https://raw.githubusercontent.com/MountainVue/Alabaster/main/scripts/install.sh)" install.sh --uninstall "$@"
