@@ -673,7 +673,7 @@ ask() {
     if [ "$assume_yes" -eq 1 ]; then
         [ "$default" = 'y' ] && return 0 || return 1
     fi
-    if [ ! -r /dev/tty ]; then
+    if ! has_terminal; then
         warn "Not running interactively and --yes was not given; skipping: ${prompt}"
         return 1
     fi
@@ -684,7 +684,14 @@ ask() {
     case "$reply" in [Yy]*) return 0 ;; *) return 1 ;; esac
 }
 
-interactive() { [ "$assume_yes" -eq 0 ] && [ -r /dev/tty ]; }
+# Whether there is a terminal to ask on. Opened rather than tested with -r:
+# /dev/tty is a node every session can see, readable by its permissions, and
+# only opening it fails where there is no controlling terminal — under
+# `ssh host command`, cron, or a container. A session like that passed the -r
+# test, failed every read, and so answered each question with its default.
+has_terminal() { { true < /dev/tty; } 2>/dev/null; }
+
+interactive() { [ "$assume_yes" -eq 0 ] && has_terminal; }
 
 run() {
     if [ "$dry_run" -eq 1 ]; then
