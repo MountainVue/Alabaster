@@ -419,8 +419,11 @@ with them.
   The card converts it with the loaded spool's filament diameter, or the
   `filament_diameter` in `[extruder]`, so the flow you set stays the same
   across spools.
+- **Live flow**: While filament moves, the header shows the volumetric flow
+  in mm³/s, so you can compare it with your hotend's limit during a print
+  with the card collapsed.
 - **Extrusion factor**: Includes a reset to 100%. Klipper carries this value
-  from one job to the next, which is why the collapsed card always shows it.
+  from one job to the next.
 - **Macro buttons**: Pick whatever your load and unload macros are called.
   Klipper defines no load/unload macros of its own, so this is a picker
   rather than a fixed pair.
